@@ -28,18 +28,19 @@ class ForumParser:
  def parse_html(self, html_content: str) -> List[Dict[str, Any]]:
  soup = self._make_soup(html_content)
  results: List[Dict[str, Any]] = []
- for elem in soup.select('.comment, .post, article[data-comment-id]'):
+ elements = soup.select('.comment, .post, article[data-comment-id], .quote')
+ for idx, elem in enumerate(elements, start=1):
  raw_id = elem.get('data-id') or elem.get('data-comment-id') or elem.get('id', '')
  match = re.search(r'\d+', str(raw_id))
- if not match:
- continue
- comment_id = int(match.group(0))
- author_elem = elem.select_one('.author, .username, .user-name')
- msg_elem = elem.select_one('.message, .post-content, .comment-body')
+ comment_id = int(match.group(0)) if match else idx
+
+ author_elem = elem.select_one('.author, .username, .user-name, small.author')
+ msg_elem = elem.select_one('.message, .post-content, .comment-body, span.text')
  if not author_elem or not msg_elem:
  continue
- username = author_elem.get_text(strip=True)
- message_html = msg_elem.decode_contents().strip()
+
+ username = author_elem.get_text(strip=True)[:250]
+ message_html = msg_elem.decode_contents().strip()[:8000]
  if username and message_html:
  results.append({'id': comment_id, 'name': username, 'message': message_html})
  return results
